@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema({
     history: [
         {
             restaurantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant' },
-            dishId: { type: mongoose.Schema.Types.ObjectId, ref: 'Dish' },
+            Id: { type: mongoose.Schema.Types.ObjectId, ref: 'Dish' },
             rating: { type: Number, min: 1, max: 5},
             orderedAt: { type: Date, default: Date.now }
         }
