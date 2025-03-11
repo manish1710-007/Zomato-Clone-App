@@ -10,7 +10,7 @@ const connectDB = require("./config/db");
 
 // Import routes and models
 const reviewRoutes = require("./routes/reviewRoutes");
-const favouriteRoutes = require("./routes/favouriteRoutes");
+const favouriteRoutes = require("./routes/favouritesRoutes");
 const recommendationsRoutes = require("./routes/recommendations");
 const orderRoutes = require("./routes/orderRoutes");
 const authRoutes = require("./routes/authRoutes");
