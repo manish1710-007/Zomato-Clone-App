@@ -11,11 +11,11 @@ const orderSchema = new mongoose.Schema({
     ],
     totalAmount: { type: Number, required: true },
     status: { type: String, enum: ["Pending", "Preparing", "On the Way", "Delivered"], default: "Pending" },
-    orderDates: { typr: Date, default: Date.now},
+    orderDates: { type: Date, default: Date.now},
     deliveryPerson: {
         name: { type: String },
         contact: { type: String },
-        loaction: {
+        location: {
             lat: { type: Number },
             lng: { type: Number },
         }
