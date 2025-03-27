@@ -1,24 +1,38 @@
 const express = require("express");
 const router = express.Router();
 const Restaurant = require("../models/Restaurant");
+const jwt = require("jsonwebtoken");
 
 // Middleware for authentication (Replace with actual authentication logic)
 const authenticate = (req, res, next) => {
-    req.userId = "user123"; // Temporary, replace with real authentication logic
-    next();
+    const token = req.header("Authorization")?.replace("Bearer ", "");
+    if (!token) return res.status(401).json({ message: "Access denied. no token provided." });
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.userId = decoded.id; // Assuming the token contains user ID
+        next();
+    } catch (error) {
+        res.status(400).json({ message: "Invalid token" });
+    }
 };
 
-// 📌 Get all restaurants
+//  Get all restaurants
 router.get("/", async (req, res) => {
     try {
-        const restaurants = await Restaurant.find();
+        const { page = 1, limit = 10 } = req.query;
+
+        const restaurants = await Restaurant.find()
+            .skip((page - 1) * limit)
+            .limit(parseInt(limit));
+
         res.json(restaurants);
     } catch (error) {
-        res.status(500).json({ message: "Error fetching restaurants", error });
+        res.status(500).json({ message: "Error fetching restaurants", error: error.message });
     }
 });
 
-// 📌 Get a restaurant by ID
+//  Get a restaurant by ID
 router.get("/:restaurantId", async (req, res) => {
     try {
         const restaurant = await Restaurant.findById(req.params.restaurantId);
@@ -30,10 +44,14 @@ router.get("/:restaurantId", async (req, res) => {
     }
 });
 
-// 📌 Add a new restaurant (Admin feature)
+//  Add a new restaurant (Admin feature)
 router.post("/", authenticate, async (req, res) => {
     try {
         const { name, location, cuisine, rating, menu } = req.body;
+
+        if (!name || !location || !cuisine || !rating || !menu) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
         const newRestaurant = new Restaurant({
             name,
             location,
@@ -45,13 +63,19 @@ router.post("/", authenticate, async (req, res) => {
         const savedRestaurant = await newRestaurant.save();
         res.status(201).json(savedRestaurant);
     } catch (error) {
-        res.status(500).json({ message: "Error adding restaurant", error });
+        res.status(500).json({ message: "Error adding restaurant", error: error.message });
     }
 });
 
-// 📌 Update restaurant details
+//  Update restaurant details
 router.put("/:restaurantId", authenticate, async (req, res) => {
     try {
+        const { name, location, cuisine, rating, menu } = req.body;
+
+        if (!name && !location && !cuisine && !rating && !menu) {
+            return res.status(400).json({ message: "At least one field is required to update" });
+        }
+
         const updatedRestaurant = await Restaurant.findByIdAndUpdate(
             req.params.restaurantId,
             req.body,
@@ -66,7 +90,7 @@ router.put("/:restaurantId", authenticate, async (req, res) => {
     }
 });
 
-// 📌 Delete a restaurant (Admin feature)
+//  Delete a restaurant (Admin feature)
 router.delete("/:restaurantId", authenticate, async (req, res) => {
     try {
         const deletedRestaurant = await Restaurant.findByIdAndDelete(req.params.restaurantId);

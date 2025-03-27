@@ -3,12 +3,13 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
+const crypto = require("crypto");
+const { check, validationResult } = require("express-validator");
 const User = require("../models/User");
 const { authenticate } = require("../middleware/authMiddleware");
 const config = require("../config");
 
-
-//  Forgot Password Route
+// Forgot Password Route
 router.post("/forgot-password", async (req, res) => {
     const { email } = req.body;
     try {
@@ -16,16 +17,16 @@ router.post("/forgot-password", async (req, res) => {
         if (!user) return res.status(404).json({ message: "User not found" });
 
         const token = crypto.randomBytes(20).toString("hex");
-        user.resetPasswordToken = token;
+        const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+        user.resetPasswordToken = hashedToken;
         user.resetPasswordExpires = Date.now() + 3600000; // 1 hour expiry
         await user.save();
 
-        // Configure Nodemailer
         const transporter = nodemailer.createTransport({
             service: "Gmail",
             auth: {
-                user: "your-email@gmail.com",
-                pass: "your-email-password",
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
             },
         });
 
@@ -35,12 +36,15 @@ router.post("/forgot-password", async (req, res) => {
             subject: "Password Reset Request",
             text: `You are receiving this because you requested a password reset.\n\n
             Click the following link to reset your password:\n
-            http://localhost:3000/reset-password/${token}\n\n
+            ${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password/${token}\n\n
             If you didn't request this, ignore this email.`,
         };
 
         transporter.sendMail(mailOptions, (err) => {
-            if (err) console.error("Error sending email:", err);
+            if (err) {
+                console.error("Error sending email:", err);
+                return res.status(500).json({ message: "Error sending email" });
+            }
             res.json({ message: "Password reset email sent!" });
         });
     } catch (error) {
@@ -49,19 +53,18 @@ router.post("/forgot-password", async (req, res) => {
     }
 });
 
-//  Reset Password Route
+// Reset Password Route
 router.post("/reset-password/:token", async (req, res) => {
     try {
-        const { token } = req.params;
-        const { newPassword } = req.body;
-
+        const hashedToken = crypto.createHash("sha256").update(req.params.token).digest("hex");
         const user = await User.findOne({
-            resetPasswordToken: token,
+            resetPasswordToken: hashedToken,
             resetPasswordExpires: { $gt: Date.now() },
         });
 
         if (!user) return res.status(400).json({ message: "Invalid or expired token" });
 
+        const { newPassword } = req.body;
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
         user.resetPasswordToken = undefined;
@@ -75,33 +78,46 @@ router.post("/reset-password/:token", async (req, res) => {
     }
 });
 
-//  Register a new user
-router.post("/register", async (req, res) => {
-    const { name, email, password } = req.body;
-
-    try {
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ message: "User already exists" });
+// Register a new user
+router.post(
+    "/register",
+    [
+        check("name", "Name is required").not().isEmpty(),
+        check("email", "Please include a valid email").isEmail(),
+        check("password", "Password must be at least 6 characters").isLength({ min: 6 }),
+    ],
+    async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new User({
-            name,
-            email,
-            password: hashedPassword,
-        });
-        await newUser.save();
+        const { name, email, password } = req.body;
 
-        const token = jwt.sign({ userId: newUser._id }, config.jwtSecret, { expiresIn: "1h" });
-        res.status(201).json({ token, user: { id: newUser._id, name: newUser.name, email: newUser.email } });
-    } catch (error) {
-        console.error("Registration error:", error);
-        res.status(500).json({ message: "Server error" });
+        try {
+            const existingUser = await User.findOne({ email });
+            if (existingUser) {
+                return res.status(400).json({ message: "User already exists" });
+            }
+
+            const hashedPassword = await bcrypt.hash(password, 10);
+            const newUser = new User({
+                name,
+                email,
+                password: hashedPassword,
+            });
+            await newUser.save();
+
+            const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+            res.status(201).json({ token, user: { id: newUser._id, name: newUser.name, email: newUser.email } });
+        } catch (error) {
+            console.error("Registration error:", error);
+            res.status(500).json({ message: "Server error" });
+        }
     }
-});
+);
 
-//  User login
+// User login
 router.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
@@ -124,7 +140,7 @@ router.post("/login", async (req, res) => {
     }
 });
 
-//  Get user profile 
+// Get user profile 
 router.get("/profile", authenticate, async (req, res) => {
     try {
         const user = await User.findById(req.user.userId).select("-password");
@@ -154,6 +170,5 @@ router.post("/admin/login", async (req, res) => {
         res.status(401).json({ error: "Not authorized" });
     }
 });
-
 
 module.exports = router;
