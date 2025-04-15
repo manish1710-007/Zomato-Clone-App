@@ -1,6 +1,6 @@
-dotenv.config();
 const Stripe = require("stripe");
 const dotenv = require("dotenv");
+dotenv.config();
 
 
 // Ensure the secret key is defined
