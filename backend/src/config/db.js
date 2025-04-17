@@ -14,3 +14,5 @@ const connectDB = async () => {
 };
 
 module.exports = connectDB;
+
+//check & see if isn't connect 
