@@ -15,4 +15,4 @@ const connectDB = async () => {
 
 module.exports = connectDB;
 
-//check & see if isn't connect, usernamechanged 
+//check & see if isn't connect, usernamechanged, pass changed 
