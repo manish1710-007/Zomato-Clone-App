@@ -15,4 +15,4 @@ const connectDB = async () => {
 
 module.exports = connectDB;
 
-//check & see if isn't connect, usernamechanged, pass changed 
+//check & see if isn't connect, usernamechanged, pass changed, this db auth na 
