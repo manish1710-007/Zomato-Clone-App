@@ -3,6 +3,8 @@ import axios from "axios";
 import RestaurantCard from "../components/Restaurantcard";
 import Header from "../components/Header";
 
+
+const backendUrl = process.env.REACT_APP_BACKEND_URL; 
 const Home = () => {
     const [restaurants, setRestaurants] = useState([]);
     const [recommendations, setRecommendations] = useState([]);
@@ -15,33 +17,30 @@ const Home = () => {
     const userId = "manish123";  
 
     useEffect(() => {
-        const fetchRestaurants = async () => {
+        const fetchData = async () => {
             try {
                 setLoading(true);
-                const res = await axios.get(`http://localhost:5000/api/restaurants?sortBy=${sortBy}&order=${order}`);
-                setRestaurants(res.data);
-                setError(null);  // Clear previous errors
+
+                // Fetch restaurants
+                const restaurantsRes = await axios.get(`${backendUrl}/api/restaurants?sortBy=${sortBy}&order=${order}`);
+                setRestaurants(restaurantsRes.data);
+
+                // Fetch recommendations if userId exists
+                if (userId) {
+                    const recommendationsRes = await axios.get(`${backendUrl}/api/recommendations?userId=${userId}`);
+                    setRecommendations(recommendationsRes.data);
+                }
+
+                setError(null); // Clear previous errors
             } catch (error) {
-                console.error("Error fetching restaurants:", error);
-                setError("Failed to load restaurants. Please try again.");
+                console.error("Error fetching data:", error);
+                setError("Failed to load data. Please check your internet connection or try again later.");
             } finally {
                 setLoading(false);
             }
         };
 
-        const fetchRecommendations = async () => {
-            try {
-                const res = await axios.get(`http://localhost:5000/api/recommendations?userId=${userId}`);
-                setRecommendations(res.data);
-            } catch (error) {
-                console.error("Error fetching recommendations:", error);
-            }
-        };
-
-        fetchRestaurants();
-        if (userId) {
-            fetchRecommendations();
-        }
+        fetchData();
     }, [sortBy, order, userId]);
 
     const filteredRestaurants = restaurants.filter((restaurant) => {
