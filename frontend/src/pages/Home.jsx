@@ -18,17 +18,21 @@ const Home = () => {
 
     useEffect(() => {
         const fetchData = async () => {
+            console.log("backend URL:", backendUrl)
+            
             try {
                 setLoading(true);
 
                 // Fetch restaurants
                 const restaurantsRes = await axios.get(`${backendUrl}/api/restaurants?sortBy=${sortBy}&order=${order}`);
                 setRestaurants(restaurantsRes.data);
+                console.log("Restaurants:", restaurantsRes.data);
 
                 // Fetch recommendations if userId exists
                 if (userId) {
                     const recommendationsRes = await axios.get(`${backendUrl}/api/recommendations?userId=${userId}`);
                     setRecommendations(recommendationsRes.data);
+                    console.log("Recommendations:", recommendationsRes.data);
                 }
 
                 setError(null); // Clear previous errors

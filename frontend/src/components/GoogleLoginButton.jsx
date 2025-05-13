@@ -1,8 +1,8 @@
 import React from "react";
 
-const GoogleLoginBUtton = () => {
+const GoogleLoginButton = () => {
     const handleLogin = () => {
-        window.location.href= "http://localhost:5000/auth/google";
+        window.location.href = `${process.env.REACT_APP_BACKEND_URL}/auth/google`;
     };
 
     return (
@@ -23,4 +23,4 @@ const GoogleLoginBUtton = () => {
     );
 };
 
-export default GoogleLoginBUtton;
+export default GoogleLoginButton;
